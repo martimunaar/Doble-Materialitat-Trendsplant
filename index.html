@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Matriu de Doble Materialitat — Trendsplant</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:  #1D9E75;
+      --blue:   #378ADD;
+      --orange: #D85A30;
+      --amber:  #EF9F27;
+      --grey:   #B4B2A9;
+      --bg:     #FAFAF8;
+      --card:   #FFFFFF;
+      --border: rgba(0,0,0,0.08);
+      --text:   #1A1A18;
+      --muted:  #888780;
+      --faint:  #C8C7C2;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 28px 36px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+      gap: 24px;
+    }
+    .header-left { flex: 1; }
+    .brand {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .brand span { color: var(--green); }
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.2;
+      color: var(--text);
+    }
+    .subtitle {
+      margin-top: 6px;
+      font-size: 12.5px;
+      color: var(--muted);
+      max-width: 520px;
+      line-height: 1.55;
+    }
+    .header-badges {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+    .badge {
+      font-size: 10.5px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: var(--bg);
+      white-space: nowrap;
+    }
+
+    /* ── Main layout ── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 36px 24px;
+      gap: 14px;
+    }
+
+    /* ── Controls row ── */
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .filter-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .cat-btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cat-btn:hover { background: var(--bg); border-color: var(--faint); }
+    .cat-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+    .cat-dot {
+      width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0;
+    }
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .leg-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: var(--muted);
+    }
+    .leg-diamond {
+      width: 10px; height: 10px;
+      border-radius: 2px;
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+
+    /* ── Chart card ── */
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 20px 16px;
+      position: relative;
+      flex: 1;
+    }
+    #dm-canvas-wrap {
+      position: relative;
+      width: 100%;
+      height: 420px;
+    }
+    #dm-canvas { width: 100% !important; height: 100% !important; }
+
+    /* ── Tooltip ── */
+    #dm-tooltip {
+      position: absolute;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.12s;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--text);
+      min-width: 210px;
+      max-width: 260px;
+      z-index: 20;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.09);
+    }
+    .tt-cat {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .tt-title { font-weight: 600; font-size: 13px; margin-bottom: 8px; line-height: 1.3; }
+    .tt-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 3px 12px;
+      color: var(--muted);
+      font-size: 11.5px;
+      margin-bottom: 8px;
+    }
+    .tt-val { color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; }
+    .tt-just {
+      font-size: 11px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 7px;
+      line-height: 1.45;
+    }
+    .tt-priority {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 10px;
+      margin-bottom: 6px;
+    }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .stat-card {
+      flex: 1;
+      min-width: 110px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .stat-label { font-size: 10.5px; color: var(--muted); font-weight: 500; letter-spacing: 0.04em; }
+    .stat-value { font-size: 22px; font-weight: 600; line-height: 1; }
+    .stat-sub { font-size: 10.5px; color: var(--muted); margin-top: 1px; }
+
+    /* ── Footer ── */
+    footer {
+      padding: 10px 36px 16px;
+      font-size: 10.5px;
+      color: var(--faint);
+      font-style: italic;
+      border-top: 1px solid var(--border);
+      background: var(--card);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="brand"><span>Trendsplant</span> · ESG 2025</div>
+    <h1>Matriu de Doble Materialitat</h1>
+    <p class="subtitle">Identificació i priorització dels 36 temes ESG segons la seva materialitat d'impacte (eix X) i la seva materialitat financera (eix Y), d'acord amb el marc CSRD/ESRS.</p>
+  </div>
+  <div class="header-badges">
+    <span class="badge">CSRD / ESRS</span>
+    <span class="badge">36 temes analitzats</span>
+    <span class="badge">Doble materialitat</span>
+  </div>
+</header>
+
+<main>
+  <!-- Controls -->
+  <div class="controls">
+    <div class="filter-group" id="dm-filter"></div>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-diamond" style="background:#1D9E75;"></div><span>Alta prioritat (ambdues ≥ 3)</span></div>
+      <div class="leg-item"><div class="leg-diamond" style="background:#EF9F27;"></div><span>Prioritat mitjana</span></div>
+      <div class="leg-item"><div class="leg-diamond" style="background:#B4B2A9;"></div><span>Prioritat baixa</span></div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="chart-card">
+    <div id="dm-canvas-wrap">
+      <canvas id="dm-canvas"></canvas>
+      <div id="dm-tooltip"></div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="stats-row"></div>
+</main>
+
+<footer>Eina basada en l'enfocament de "Double Materiality" promogut per la Comisión Europea (CSRD/ESRS) — Trendsplant 2025</footer>
+
+<script>
+const data = [
+  {id:1,  tema:"Adaptació canvi climàtic",    x:10, y:4.0, just:"Risc alt de disrupció en cultius de cotó.",        cat:"Medi ambient"},
+  {id:2,  tema:"Mitigació canvi climàtic",     x:12, y:3.0, just:"Reducció d'emissions en logística.",               cat:"Medi ambient"},
+  {id:3,  tema:"Energia",                      x:11, y:4.0, just:"Costos de fabricació a la Península.",             cat:"Medi ambient"},
+  {id:4,  tema:"Contaminació de l'aire",       x:7,  y:2.0, just:"Impacte moderat pel transport.",                   cat:"Medi ambient"},
+  {id:5,  tema:"Contaminació de l'aigua",      x:12, y:3.0, just:"Crític en tints (tot i que usen Eco-tints).",      cat:"Medi ambient"},
+  {id:6,  tema:"Contaminació del sòl",         x:9,  y:2.0, just:"Ús de pesticides en cotó no-orgànic.",             cat:"Medi ambient"},
+  {id:7,  tema:"Org. vius i rec. alimentaris", x:4,  y:1.0, just:"Baixa rellevància pel sector tèxtil.",             cat:"Medi ambient"},
+  {id:8,  tema:"Substàncies preocupants",      x:8,  y:3.0, just:"Gestió de químics en acabats de roba.",            cat:"Medi ambient"},
+  {id:9,  tema:"Microplàstics",                x:9,  y:2.0, just:"Rentat de fibres sintètiques (banyadors).",        cat:"Medi ambient"},
+  {id:10, tema:"Aigua",                        x:10, y:3.0, just:"Consum intensiu en la fase de cultiu.",            cat:"Medi ambient"},
+  {id:11, tema:"Pèrdua biodiversitat",         x:9,  y:2.0, just:"Impacte indirecte per l'ús del sòl.",              cat:"Medi ambient"},
+  {id:12, tema:"Estat de les espècies",        x:6,  y:1.0, just:"Impacte baix/indirecte.",                          cat:"Medi ambient"},
+  {id:13, tema:"Extensió ecosistemes",         x:7,  y:1.0, just:"Impacte moderat/baix.",                            cat:"Medi ambient"},
+  {id:14, tema:"Serveis ecosistèmics",         x:7,  y:1.0, just:"Impacte moderat/baix.",                            cat:"Medi ambient"},
+  {id:15, tema:"Entrades de recursos",         x:9,  y:4.0, just:"Dependència de matèries primeres premium.",        cat:"Medi ambient"},
+  {id:16, tema:"Sortides de recursos",         x:8,  y:2.0, just:"Gestió del stock i sobrants.",                     cat:"Medi ambient"},
+  {id:17, tema:"Residus",                      x:10, y:3.0, just:"Packaging i circularitat de la roba.",             cat:"Medi ambient"},
+  {id:18, tema:"Condicions de treball",        x:12, y:4.0, just:"Crític: Base de la seva reputació.",               cat:"Social"},
+  {id:19, tema:"Igualtat i oportunitats",      x:11, y:3.0, just:"Diversitat en oficines i botigues.",               cat:"Social"},
+  {id:20, tema:"Altres drets laborals",        x:9,  y:2.0, just:"Convenis del sector tèxtil.",                      cat:"Social"},
+  {id:21, tema:"S2: Condicions treball",       x:11, y:3.0, just:"Seguretat en tallers externs (Portugal).",         cat:"Social"},
+  {id:22, tema:"S2: Igualtat i oport.",        x:10, y:2.0, just:"Control de proveïdors externs.",                   cat:"Social"},
+  {id:23, tema:"S2: Altres drets laborals",    x:8,  y:2.0, just:"Flexibilitat i drets en cadena submin.",           cat:"Social"},
+  {id:24, tema:"Drets eco/soc/culturals",      x:6,  y:1.0, just:"Impacte indirecte.",                               cat:"Social"},
+  {id:25, tema:"Drets civils i polítics",      x:5,  y:1.0, just:"Impacte baix en el context UE.",                   cat:"Social"},
+  {id:26, tema:"Drets pobles indígenes",       x:2,  y:0.65,just:"Molt baix (producció local).",                     cat:"Social"},
+  {id:27, tema:"Info consumidors/usuaris",     x:10, y:4.0, just:"Oportunitat: Transparència total.",                cat:"Social"},
+  {id:28, tema:"Seguretat consumidors",        x:8,  y:2.0, just:"Productes sense tòxics per a la pell.",            cat:"Social"},
+  {id:29, tema:"Inclusió social usuaris",      x:7,  y:2.0, just:"Accessibilitat i preus justos.",                   cat:"Social"},
+  {id:30, tema:"Cultura empresarial",          x:10, y:3.0, just:'Identitat de marca "Slow Fashion".',               cat:"Governança"},
+  {id:31, tema:"Protecció denunciants",        x:5,  y:2.0, just:"Compliment normatiu bàsic.",                       cat:"Governança"},
+  {id:32, tema:"Compromís polític",            x:3,  y:1.40,just:"Influència baixa/nul·la.",                         cat:"Governança"},
+  {id:33, tema:"Relacions proveïdors",         x:11, y:4.0, just:"Relació estreta amb tallers de proximitat.",       cat:"Governança"},
+  {id:34, tema:"Corrupció i suborn",           x:6,  y:2.0, just:"Risc baix però material per control.",             cat:"Governança"},
+  {id:35, tema:"Innovació digital",            x:10, y:5.0, just:"Clau: Motor de vendes i eficiència.",              cat:"Governança"},
+  {id:36, tema:"Donacions i fundacions",       x:8,  y:1.0, just:"Accions filantròpiques (impacte positiu).",        cat:"Governança"},
+];
+
+const catColors = {
+  "Medi ambient": { high:"#1D9E75", mid:"#EF9F27", low:"#B4B2A9", accent:"#1D9E75" },
+  "Social":       { high:"#378ADD", mid:"#EF9F27", low:"#B4B2A9", accent:"#378ADD" },
+  "Governança":   { high:"#D85A30", mid:"#EF9F27", low:"#B4B2A9", accent:"#D85A30" },
+};
+
+const priorityLabels = { high:"Alta prioritat", mid:"Prioritat mitjana", low:"Baixa prioritat" };
+const priorityBg     = { high:"rgba(29,158,117,0.12)", mid:"rgba(239,159,39,0.12)", low:"rgba(180,178,169,0.15)" };
+const priorityTxt    = { high:"#1D9E75", mid:"#D18A00", low:"#888780" };
+
+function getPriority(d) {
+  if (d.x >= 9 && d.y >= 3) return "high";
+  if (d.x >= 6 && d.y >= 2) return "mid";
+  return "low";
+}
+function getColor(d) { return catColors[d.cat][getPriority(d)]; }
+
+// ── Filters ──
+let activeCat = null;
+const cats = ["Medi ambient","Social","Governança"];
+const filterDiv = document.getElementById('dm-filter');
+
+const allBtn = document.createElement('button');
+allBtn.className = 'cat-btn active';
+allBtn.textContent = 'Tots els temes';
+allBtn.onclick = () => { activeCat = null; updateFilter(); };
+filterDiv.appendChild(allBtn);
+
+cats.forEach(c => {
+  const btn = document.createElement('button');
+  btn.className = 'cat-btn';
+  const dot = document.createElement('span');
+  dot.className = 'cat-dot';
+  dot.style.background = catColors[c].accent;
+  btn.appendChild(dot);
+  btn.appendChild(document.createTextNode(c));
+  btn.onclick = () => { activeCat = c; updateFilter(); };
+  filterDiv.appendChild(btn);
+});
+
+function updateFilter() {
+  filterDiv.querySelectorAll('.cat-btn').forEach((b, i) => {
+    b.classList.toggle('active',
+      (i === 0 && activeCat === null) ||
+      (i > 0 && cats[i-1] === activeCat)
+    );
+  });
+  chart.data.datasets[0].backgroundColor = data.map(d =>
+    activeCat && d.cat !== activeCat ? 'rgba(180,178,169,0.18)' : getColor(d)
+  );
+  chart.data.datasets[0].borderColor = data.map(d =>
+    activeCat && d.cat !== activeCat ? 'rgba(180,178,169,0.12)' : getColor(d)
+  );
+  chart.update();
+  renderStats();
+}
+
+// ── Stats ──
+function renderStats() {
+  const filtered = activeCat ? data.filter(d => d.cat === activeCat) : data;
+  const high = filtered.filter(d => getPriority(d) === 'high').length;
+  const mid  = filtered.filter(d => getPriority(d) === 'mid').length;
+  const low  = filtered.filter(d => getPriority(d) === 'low').length;
+  const statsRow = document.getElementById('stats-row');
+  statsRow.innerHTML = `
+    <div class="stat-card">
+      <span class="stat-label">Temes analitzats</span>
+      <span class="stat-value">${filtered.length}</span>
+      <span class="stat-sub">${activeCat || 'Total ESG'}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Alta prioritat</span>
+      <span class="stat-value" style="color:#1D9E75">${high}</span>
+      <span class="stat-sub">Impacte ≥9 · Financer ≥3</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Prioritat mitjana</span>
+      <span class="stat-value" style="color:#D18A00">${mid}</span>
+      <span class="stat-sub">Impacte ≥6 · Financer ≥2</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Baixa prioritat</span>
+      <span class="stat-value" style="color:#B4B2A9">${low}</span>
+      <span class="stat-sub">Resta de temes</span>
+    </div>
+  `;
+}
+renderStats();
+
+// ── Chart ──
+const canvas = document.getElementById('dm-canvas');
+const tooltip = document.getElementById('dm-tooltip');
+
+const chart = new Chart(canvas, {
+  type: 'scatter',
+  data: {
+    datasets: [{
+      label: 'Temes ESG',
+      data: data.map(d => ({ x: d.x, y: d.y, id: d.id })),
+      backgroundColor: data.map(d => getColor(d)),
+      borderColor:     data.map(d => getColor(d)),
+      pointStyle:      'rectRot',
+      pointRadius:     data.map(d => getPriority(d) === 'high' ? 10 : 8),
+      pointHoverRadius: 13,
+      borderWidth: 1,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: { padding: { top: 20, right: 30, bottom: 20, left: 10 } },
+    scales: {
+      x: {
+        min: 0, max: 15,
+        title: { display: true, text: "Materialitat d'impacte →", font: { size: 12, weight: '600', family: 'DM Sans' }, color: '#378ADD' },
+        grid: { color: 'rgba(0,0,0,0.05)' },
+        ticks: { font: { size: 10, family: 'DM Mono' }, color: '#B4B2A9', stepSize: 1 },
+        border: { color: 'rgba(0,0,0,0.1)' }
+      },
+      y: {
+        min: 0, max: 5.5,
+        title: { display: true, text: "Materialitat financera →", font: { size: 12, weight: '600', family: 'DM Sans' }, color: '#D85A30' },
+        grid: { color: 'rgba(0,0,0,0.05)' },
+        ticks: { font: { size: 10, family: 'DM Mono' }, color: '#B4B2A9', stepSize: 0.5 },
+        border: { color: 'rgba(0,0,0,0.1)' }
+      }
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false },
+    },
+    onHover: (evt, elements) => {
+      canvas.style.cursor = elements.length ? 'pointer' : 'default';
+    }
+  },
+  plugins: [{
+    id: 'idLabels',
+    afterDatasetsDraw(chart) {
+      const ctx = chart.ctx;
+      chart.data.datasets[0].data.forEach((pt, i) => {
+        const meta = chart.getDatasetMeta(0);
+        const el = meta.data[i];
+        if (!el) return;
+        const {x, y} = el.getProps(['x','y']);
+        const d = data[i];
+        const isFiltered = activeCat && d.cat !== activeCat;
+        ctx.save();
+        ctx.font = '600 9px DM Sans, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = isFiltered ? 'rgba(180,178,169,0.25)' : '#fff';
+        ctx.fillText(d.id, x, y);
+        ctx.restore();
+      });
+    }
+  }, {
+    id: 'arcLines',
+    beforeDatasetsDraw(chart) {
+      const ctx = chart.ctx;
+      const xScale = chart.scales.x;
+      const yScale = chart.scales.y;
+      const ox = xScale.getPixelForValue(0);
+      const oy = yScale.getPixelForValue(0);
+      const thresholds = [3, 6, 9, 12];
+      ctx.save();
+      thresholds.forEach((r, i) => {
+        const px = xScale.getPixelForValue(r) - ox;
+        const py = oy - yScale.getPixelForValue(r);
+        const rad = Math.max(px, py);
+        ctx.beginPath();
+        ctx.arc(ox, oy, rad, -Math.PI/2, 0);
+        ctx.strokeStyle = i === thresholds.length - 1 ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.07)';
+        ctx.lineWidth = i === thresholds.length - 1 ? 1.5 : 1;
+        ctx.setLineDash([5, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      });
+      ctx.restore();
+    }
+  }]
+});
+
+// ── Tooltip ──
+canvas.addEventListener('mousemove', (evt) => {
+  const rect = canvas.getBoundingClientRect();
+  const pts = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false, radius: 15 }, true);
+  if (pts.length) {
+    const idx = pts[0].index;
+    const d = data[idx];
+    const p = getPriority(d);
+    const col = catColors[d.cat].accent;
+    tooltip.style.opacity = '1';
+    const px = evt.clientX - rect.left;
+    const py = evt.clientY - rect.top;
+    const tw = 230;
+    let left = px + 18;
+    if (left + tw > rect.width) left = px - tw - 18;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = Math.max(0, py - 10) + 'px';
+    tooltip.innerHTML = `
+      <div class="tt-cat" style="color:${col}">${d.cat}</div>
+      <div class="tt-title">${d.id}. ${d.tema}</div>
+      <span class="tt-priority" style="background:${priorityBg[p]};color:${priorityTxt[p]}">${priorityLabels[p]}</span>
+      <div class="tt-grid">
+        <span>Impacte</span><span class="tt-val">${d.x}/15</span>
+        <span>Financer</span><span class="tt-val">${d.y}/5</span>
+      </div>
+      <div class="tt-just">${d.just}</div>
+    `;
+  } else {
+    tooltip.style.opacity = '0';
+  }
+});
+canvas.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
+</script>
+</body>
+</html>
